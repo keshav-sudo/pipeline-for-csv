@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alemeno AI Transaction Processing Pipeline</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(0, 0, 0, 0.06);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --primary: #0284c7;
+            --primary-hover: #0369a1;
+            --accent: #b45309;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #d97706;
+            --step-inactive: #cbd5e1;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.08) 0px, transparent 40%),
+                radial-gradient(at 100% 100%, rgba(124, 58, 237, 0.06) 0px, transparent 40%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 1.5rem;
+        }
+
+        .logo-section h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #0284c7 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-section p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .status-badges {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .badge-status {
+            background: rgba(2, 132, 199, 0.06);
+            border: 1px solid rgba(2, 132, 199, 0.12);
+            color: var(--primary);
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge-status.active::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards Base */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+            margin-bottom: 2rem;
+        }
+
+        .card-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-primary);
+        }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 2.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(0, 0, 0, 0.01);
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(2, 132, 199, 0.04);
+            box-shadow: 0 0 15px rgba(2, 132, 199, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+
+        .upload-zone p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .upload-zone span {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Jobs Queue list */
+        .jobs-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .job-item {
+            background: rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            border-radius: 10px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .job-item:hover, .job-item.active {
+            border-color: var(--primary);
+            background: rgba(2, 132, 199, 0.04);
+        }
+
+        .job-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .job-filename {
+            font-weight: 600;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+
+        .job-status-badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending { background: rgba(245, 158, 11, 0.12); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.15); }
+        .status-processing { background: rgba(2, 132, 199, 0.12); color: var(--primary); border: 1px solid rgba(2, 132, 199, 0.15); }
+        .status-completed { background: rgba(16, 185, 129, 0.12); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.15); }
+        .status-failed { background: rgba(239, 68, 68, 0.12); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.15); }
+
+        .job-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Results Panel */
+        .results-placeholder {
+            text-align: center;
+            padding: 8rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .results-placeholder-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Stepper Component */
+        .stepper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            z-index: 2;
+        }
+
+        .step-text {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .step-line {
+            height: 3px;
+            background: #cbd5e1;
+            flex: 1;
+            margin: 0 -20px;
+            margin-top: -22px;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        /* Stepper States */
+        .step.active .step-circle {
+            background: rgba(2, 132, 199, 0.15);
+            color: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(2, 132, 199, 0.2);
+            animation: pulse-border-step 1.5s infinite;
+        }
+
+        .step.active .step-text {
+            color: var(--primary);
+        }
+
+        .step.completed .step-circle {
+            background: var(--success);
+            color: white;
+        }
+
+        .step.completed .step-text {
+            color: var(--success);
+        }
+
+        .step.failed .step-circle {
+            background: var(--danger);
+            color: white;
+        }
+
+        .step.failed .step-text {
+            color: var(--danger);
+        }
+
+        .step-line.completed {
+            background: var(--success);
+        }
+
+        .step-line.active {
+            background: var(--primary);
+            animation: progress-slide 1.5s infinite linear;
+            background-image: linear-gradient(90deg, var(--success) 0%, var(--primary) 50%, #cbd5e1 100%);
+            background-size: 200% 100%;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-card {
+            background: rgba(0, 0, 0, 0.01);
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+        }
+
+        .metric-value.danger {
+            color: var(--danger);
+        }
+
+        /* Narrative Block */
+        .narrative-card {
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.05) 0%, rgba(124, 58, 237, 0.03) 100%);
+            border: 1px solid rgba(217, 119, 6, 0.2);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .narrative-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .narrative-title {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .risk-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .risk-low { background: rgba(16, 185, 129, 0.15); color: #047857; }
+        .risk-medium { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+        .risk-high { background: rgba(239, 68, 68, 0.15); color: #b91c1c; animation: pulse-border 2s infinite; }
+
+        .narrative-text {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Tabs */
+        .tabs-header {
+            display: flex;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            margin-bottom: 1.5rem;
+            gap: 1.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.75rem 0;
+            cursor: pointer;
+            position: relative;
+            font-family: inherit;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+        }
+
+        .tab-btn.active::after {
+            content: "";
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--primary);
+        }
+
+        /* Table Design */
+        .table-container {
+            overflow-x: auto;
+            max-height: 450px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.04);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background: #f1f5f9;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+            white-space: nowrap;
+        }
+
+        tr:hover td {
+            background: rgba(0, 0, 0, 0.01);
+        }
+
+        .anomaly-row {
+            background: rgba(239, 68, 68, 0.02);
+        }
+
+        .anomaly-badge {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: help;
+        }
+
+        .category-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+
+        .category-pill.llm {
+            background: rgba(124, 58, 237, 0.08);
+            color: #6d28d9;
+            border: 1px solid rgba(124, 58, 237, 0.15);
+        }
+
+        .category-pill.llm::before {
+            content: "🧠";
+            font-size: 0.75rem;
+        }
+
+        .currency-badge {
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .currency-badge.inr {
+            color: #ea580c;
+        }
+
+        .currency-badge.usd {
+            color: #1d4ed8;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.5; }
+            50% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.5; }
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+            70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        @keyframes pulse-border-step {
+            0% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.3); }
+            70% { box-shadow: 0 0 0 6px rgba(2, 132, 199, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0); }
+        }
+
+        @keyframes progress-slide {
+            0% { background-position: 100% 0; }
+            100% { background-position: 0% 0; }
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.12);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.25);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="logo-section">
+            <h1>Alemeno</h1>
+            <p>AI-Powered Transaction Processing Pipeline</p>
+        </div>
+        <div class="status-badges">
+            <div class="badge-status active">API Status: Connected</div>
+            <div class="badge-status">Engine: DeepSeek</div>
+        </div>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- Sidebar controls -->
+        <div class="sidebar">
+            <!-- Upload Panel -->
+            <div class="card">
+                <div class="card-title">Upload Dataset</div>
+                <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                    <span class="upload-icon">📁</span>
+                    <p>Drag & drop transactions CSV here, or <span>browse</span></p>
+                    <p style="font-size: 0.75rem; margin-top: 0.5rem;">Required headers: merchant, amount, currency, status, account_id</p>
+                    <input type="file" id="fileInput" accept=".csv">
+                </div>
+            </div>
+
+            <!-- Jobs List -->
+            <div class="card">
+                <div class="card-title">
+                    <span>Recent Jobs</span>
+                    <button onclick="fetchJobs()" style="background: none; border: none; color: var(--primary); cursor: pointer; font-size: 0.8rem; font-weight: 600; font-family: inherit;">Refresh</button>
+                </div>
+                <div class="jobs-list" id="jobsContainer">
+                    <p style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 1rem 0;">No jobs uploaded yet</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Display -->
+        <div class="main-panel">
+            <!-- Stepper Container -->
+            <div class="stepper" id="stepperContainer" style="display: none;">
+                <div class="step" id="stepPending">
+                    <div class="step-circle">1</div>
+                    <div class="step-text">Enqueued</div>
+                </div>
+                <div class="step-line" id="line1"></div>
+                <div class="step" id="stepProcessing">
+                    <div class="step-circle">2</div>
+                    <div class="step-text">Processing</div>
+                </div>
+                <div class="step-line" id="line2"></div>
+                <div class="step" id="stepCompleted">
+                    <div class="step-circle">3</div>
+                    <div class="step-text">Done</div>
+                </div>
+            </div>
+
+            <div class="card" style="min-height: 600px; display: flex; flex-direction: column;">
+                <div id="resultsContent" style="display: none; flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h2 id="resultJobTitle" style="font-family: 'Outfit', sans-serif; font-size: 1.4rem; font-weight: 600;">Job Details</h2>
+                        <span id="resultJobStatus" class="job-status-badge">Completed</span>
+                    </div>
+
+                    <!-- Metrics cards -->
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Total Spend (INR)</div>
+                            <div class="metric-value" id="metricSpendInr">₹0.00</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Total Spend (USD)</div>
+                            <div class="metric-value" id="metricSpendUsd">$0.00</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Flagged Anomalies</div>
+                            <div class="metric-value danger" id="metricAnomalies">0</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Cleaned / Raw Rows</div>
+                            <div class="metric-value" id="metricRows">0 / 0</div>
+                        </div>
+                    </div>
+
+                    <!-- Executive Summary Narrative -->
+                    <div class="narrative-card" id="narrativeCard" style="display: none;">
+                        <div class="narrative-header">
+                            <div class="narrative-title">💡 DeepSeek Executive Narrative Summary</div>
+                            <span class="risk-badge" id="riskBadge">Low Risk</span>
+                        </div>
+                        <div class="narrative-text" id="narrativeText">
+                            Financial summary of the processing session will appear here...
+                        </div>
+                    </div>
+
+                    <!-- Tabs & Tables -->
+                    <div class="tabs-header">
+                        <button class="tab-btn active" onclick="switchTab('transactions')">All Transactions</button>
+                        <button class="tab-btn" onclick="switchTab('anomalies')">Flagged Anomalies</button>
+                    </div>
+
+                    <div id="transactionsTab" class="tab-content">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Txn ID</th>
+                                        <th>Date</th>
+                                        <th>Merchant</th>
+                                        <th>Amount</th>
+                                        <th>Currency</th>
+                                        <th>Status</th>
+                                        <th>Category</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactionsTableBody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="anomaliesTab" class="tab-content" style="display: none;">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Txn ID</th>
+                                        <th>Date</th>
+                                        <th>Merchant</th>
+                                        <th>Amount</th>
+                                        <th>Currency</th>
+                                        <th>Anomaly Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="anomaliesTableBody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="placeholderContent" class="results-placeholder">
+                    <div class="results-placeholder-icon">📈</div>
+                    <h3>No Job Selected</h3>
+                    <p style="margin-top: 0.5rem; font-size: 0.9rem;">Upload a CSV transaction file or select a job from the list to track the pipeline steps and view categorization results.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "http://localhost:8000";
+    let selectedJobId = null;
+    let pollInterval = null;
+    let activeTab = 'transactions';
+
+    // Fetch jobs on load
+    window.addEventListener('load', () => {
+        fetchJobs();
+        setupUpload();
+    });
+
+    // Setup drag & drop files
+    function setupUpload() {
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                uploadFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                uploadFile(fileInput.files[0]);
+            }
+        });
+    }
+
+    // API Upload CSV
+    async function uploadFile(file) {
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const dropzone = document.getElementById('dropzone');
+            dropzone.innerHTML = `<span class="upload-icon" style="display:inline-block;animation:pulse 1s infinite">⚙️</span><p>Uploading dataset...</p>`;
+            
+            const response = await fetch(`${API_URL}/jobs/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || 'Failed to upload CSV');
+            }
+
+            const data = await response.json();
+            
+            // Reset upload zone
+            dropzone.innerHTML = `<span class="upload-icon">📁</span><p>Drag & drop transactions CSV here, or <span>browse</span></p><p style="font-size: 0.75rem; margin-top: 0.5rem;">Required headers: merchant, amount, currency, status, account_id</p>`;
+            
+            // Fetch jobs and select this one
+            await fetchJobs();
+            selectJob(data.id);
+
+        } catch (error) {
+            alert(`Upload Error: ${error.message}`);
+            // Restore dropzone
+            document.getElementById('dropzone').innerHTML = `<span class="upload-icon">📁</span><p>Drag & drop transactions CSV here, or <span>browse</span></p><p style="font-size: 0.75rem; margin-top: 0.5rem;">Required headers: merchant, amount, currency, status, account_id</p>`;
+        }
+    }
+
+    // Retrieve jobs
+    async function fetchJobs() {
+        try {
+            const response = await fetch(`${API_URL}/jobs`);
+            if (!response.ok) throw new Error('Could not fetch jobs');
+            const jobs = await response.json();
+            
+            const container = document.getElementById('jobsContainer');
+            if (jobs.length === 0) {
+                container.innerHTML = `<p style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 1rem 0;">No jobs uploaded yet</p>`;
+                return;
+            }
+
+            container.innerHTML = jobs.map(job => {
+                const date = new Date(job.created_at).toLocaleString();
+                const activeClass = job.id === selectedJobId ? 'active' : '';
+                return `
+                    <div class="job-item ${activeClass}" onclick="selectJob('${job.id}')" id="job-item-${job.id}">
+                        <div class="job-item-header">
+                            <span class="job-filename" title="${job.filename}">${job.filename}</span>
+                            <span class="job-status-badge status-${job.status}">${job.status}</span>
+                        </div>
+                        <div class="job-time">${date}</div>
+                    </div>
+                `;
+            }).join('');
+
+        } catch (error) {
+            console.error("Jobs list fetch error:", error);
+        }
+    }
+
+    // Select job and check status or render
+    async function selectJob(jobId) {
+        selectedJobId = jobId;
+        
+        // Highlight active job item
+        document.querySelectorAll('.job-item').forEach(item => item.classList.remove('active'));
+        const activeItem = document.getElementById(`job-item-${jobId}`);
+        if (activeItem) activeItem.classList.add('active');
+
+        // Stop previous polling
+        if (pollInterval) clearInterval(pollInterval);
+
+        // Fetch immediate status
+        checkJobStatus();
+
+        // Start polling if not finished
+        pollInterval = setInterval(checkJobStatus, 1500);
+    }
+
+    // Check status
+    async function checkJobStatus() {
+        if (!selectedJobId) return;
+
+        try {
+            const response = await fetch(`${API_URL}/jobs/${selectedJobId}/status`);
+            if (!response.ok) throw new Error('Failed to fetch job status');
+            const job = await response.json();
+
+            // Update badge status in sidebar item dynamically
+            const sidebarBadge = document.querySelector(`#job-item-${selectedJobId} .job-status-badge`);
+            if (sidebarBadge) {
+                sidebarBadge.className = `job-status-badge status-${job.status}`;
+                sidebarBadge.textContent = job.status;
+            }
+
+            // Update Stepper Flow UI
+            updateStepper(job.status);
+
+            if (job.status === 'completed') {
+                clearInterval(pollInterval);
+                fetchResults(selectedJobId);
+            } else if (job.status === 'failed') {
+                clearInterval(pollInterval);
+                renderFailure(job.error_message || 'Unknown processing error');
+            } else {
+                renderLoading(job.status);
+            }
+
+        } catch (error) {
+            console.error("Status polling error:", error);
+        }
+    }
+
+    // Update Stepper Flow visuals
+    function updateStepper(status) {
+        const stepper = document.getElementById('stepperContainer');
+        const stepPending = document.getElementById('stepPending');
+        const stepProcessing = document.getElementById('stepProcessing');
+        const stepCompleted = document.getElementById('stepCompleted');
+        const line1 = document.getElementById('line1');
+        const line2 = document.getElementById('line2');
+
+        stepper.style.display = 'flex';
+
+        // Reset classes
+        stepPending.className = 'step';
+        stepProcessing.className = 'step';
+        stepCompleted.className = 'step';
+        line1.className = 'step-line';
+        line2.className = 'step-line';
+
+        if (status === 'pending') {
+            stepPending.classList.add('active');
+            line1.classList.add('active');
+        } else if (status === 'processing') {
+            stepPending.classList.add('completed');
+            stepProcessing.classList.add('active');
+            line1.classList.add('completed');
+            line2.classList.add('active');
+        } else if (status === 'completed') {
+            stepPending.classList.add('completed');
+            stepProcessing.classList.add('completed');
+            stepCompleted.classList.add('completed');
+            line1.classList.add('completed');
+            line2.classList.add('completed');
+        } else if (status === 'failed') {
+            stepPending.classList.add('completed');
+            stepProcessing.classList.add('failed');
+            stepCompleted.classList.add('failed');
+            line1.classList.add('completed');
+            line2.classList.add('completed');
+        }
+    }
+
+    // Render loading state
+    function renderLoading(status) {
+        document.getElementById('placeholderContent').style.display = 'none';
+        document.getElementById('resultsContent').style.display = 'block';
+        document.getElementById('resultJobTitle').textContent = `Processing Pipeline Active`;
+        document.getElementById('resultJobStatus').className = `job-status-badge status-${status}`;
+        document.getElementById('resultJobStatus').textContent = status;
+        
+        // Hide tables/metrics while processing
+        document.getElementById('narrativeCard').style.display = 'none';
+        document.getElementById('metricSpendInr').textContent = 'Pending...';
+        document.getElementById('metricSpendUsd').textContent = 'Pending...';
+        document.getElementById('metricAnomalies').textContent = 'Pending...';
+        document.getElementById('metricRows').textContent = 'Processing...';
+        
+        document.getElementById('transactionsTableBody').innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 3rem 0;">Running ETL data parsing, normalization, and outlier scans. Please wait...</td></tr>`;
+        document.getElementById('anomaliesTableBody').innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 3rem 0;">Scanning data slices...</td></tr>`;
+    }
+
+    // Render failure state
+    function renderFailure(errMsg) {
+        document.getElementById('placeholderContent').style.display = 'none';
+        document.getElementById('resultsContent').style.display = 'block';
+        document.getElementById('resultJobTitle').textContent = `Pipeline Execution Failed`;
+        document.getElementById('resultJobStatus').className = `job-status-badge status-failed`;
+        document.getElementById('resultJobStatus').textContent = 'failed';
+        
+        document.getElementById('narrativeCard').style.display = 'block';
+        document.getElementById('narrativeText').innerHTML = `<span style="color:var(--danger)">Error Details: ${errMsg}</span>`;
+        document.getElementById('riskBadge').className = 'risk-badge risk-high';
+        document.getElementById('riskBadge').textContent = 'Error';
+
+        document.getElementById('metricSpendInr').textContent = 'N/A';
+        document.getElementById('metricSpendUsd').textContent = 'N/A';
+        document.getElementById('metricAnomalies').textContent = 'N/A';
+        document.getElementById('metricRows').textContent = 'N/A';
+        
+        document.getElementById('transactionsTableBody').innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger); padding: 3rem 0;">Execution was stopped due to an exception. Please verify your CSV headers.</td></tr>`;
+    }
+
+    // Retrieve full results
+    async function fetchResults(jobId) {
+        try {
+            const response = await fetch(`${API_URL}/jobs/${jobId}/results`);
+            if (!response.ok) throw new Error('Failed to fetch job results');
+            const data = await response.json();
+
+            document.getElementById('placeholderContent').style.display = 'none';
+            document.getElementById('resultsContent').style.display = 'block';
+            
+            document.getElementById('resultJobTitle').textContent = data.filename;
+            document.getElementById('resultJobStatus').className = `job-status-badge status-${data.status}`;
+            document.getElementById('resultJobStatus').textContent = data.status;
+
+            // Render Metrics
+            const summary = data.summary || { total_spend_inr: 0, total_spend_usd: 0, anomaly_count: 0, narrative: '', risk_level: 'low' };
+            document.getElementById('metricSpendInr').textContent = `₹${summary.total_spend_inr.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('metricSpendUsd').textContent = `$${summary.total_spend_usd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('metricAnomalies').textContent = summary.anomaly_count;
+            
+            // Raw / Cleaned count
+            const jobsRes = await fetch(`${API_URL}/jobs`);
+            const jobsList = await jobsRes.json();
+            const matchingJob = jobsList.find(j => j.id === jobId);
+            if (matchingJob) {
+                document.getElementById('metricRows').textContent = `${matchingJob.row_count_clean} / ${matchingJob.row_count_raw}`;
+            }
+
+            // Render DeepSeek Narrative Summary
+            if (summary.narrative) {
+                document.getElementById('narrativeCard').style.display = 'block';
+                document.getElementById('narrativeText').textContent = summary.narrative;
+                const riskBadge = document.getElementById('riskBadge');
+                riskBadge.className = `risk-badge risk-${summary.risk_level}`;
+                riskBadge.textContent = `${summary.risk_level} Risk`;
+            } else {
+                document.getElementById('narrativeCard').style.display = 'none';
+            }
+
+            // Render Transactions Table
+            const txBody = document.getElementById('transactionsTableBody');
+            if (data.transactions.length === 0) {
+                txBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 3rem 0;">No transactions found in database</td></tr>`;
+            } else {
+                txBody.innerHTML = data.transactions.map(t => {
+                    const isAnomaly = t.is_anomaly ? 'anomaly-row' : '';
+                    const anomalyText = t.is_anomaly ? `<span class="anomaly-badge" title="${t.anomaly_reason || 'Outlier amount'}">⚠️ Anomaly</span>` : '';
+                    
+                    // Category configuration
+                    let catHtml = '';
+                    if (t.category === 'Uncategorised' && t.llm_category) {
+                        catHtml = `<span class="category-pill llm">${t.llm_category}</span>`;
+                    } else if (t.category === 'Uncategorised' && t.llm_failed) {
+                        catHtml = `<span class="category-pill" style="color:var(--danger)">Uncategorised (AI Fail)</span>`;
+                    } else {
+                        catHtml = `<span class="category-pill">${t.category}</span>`;
+                    }
+
+                    const formattedAmount = t.amount.toLocaleString(t.currency === 'INR' ? 'en-IN' : 'en-US', {minimumFractionDigits: 2});
+
+                    return `
+                        <tr class="${isAnomaly}">
+                            <td><code>${t.txn_id}</code></td>
+                            <td>${t.date}</td>
+                            <td><strong>${t.merchant}</strong> ${anomalyText}</td>
+                            <td><strong>${formattedAmount}</strong></td>
+                            <td><span class="currency-badge ${t.currency.toLowerCase()}">${t.currency}</span></td>
+                            <td><span style="font-size:0.75rem;font-weight:600;color:${t.status==='SUCCESS'?'var(--success)':'var(--danger)'}">${t.status}</span></td>
+                            <td>${catHtml}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // Render Anomalies Table
+            const anomalyBody = document.getElementById('anomaliesTableBody');
+            if (data.anomalies.length === 0) {
+                anomalyBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 3rem 0;">No outliers or transaction anomalies flagged in this batch.</td></tr>`;
+            } else {
+                anomalyBody.innerHTML = data.anomalies.map(a => {
+                    const formattedAmount = a.amount.toLocaleString(a.currency === 'INR' ? 'en-IN' : 'en-US', {minimumFractionDigits: 2});
+                    return `
+                        <tr class="anomaly-row">
+                            <td><code>${a.txn_id}</code></td>
+                            <td>${a.date}</td>
+                            <td><strong>${a.merchant}</strong></td>
+                            <td><strong>${formattedAmount}</strong></td>
+                            <td><span class="currency-badge ${a.currency.toLowerCase()}">${a.currency}</span></td>
+                            <td><span style="color:var(--danger);font-weight:500;">${a.anomaly_reason || '3x Median spending outlier'}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+        } catch (error) {
+            console.error("Results fetch error:", error);
+        }
+    }
+
+    // Switch Tabs
+    function switchTab(tabId) {
+        activeTab = tabId;
+        
+        // Update tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('onclick').includes(tabId)) {
+                btn.classList.add('active');
+            }
+        });
+
+        // Toggle content
+        document.getElementById('transactionsTab').style.display = tabId === 'transactions' ? 'block' : 'none';
+        document.getElementById('anomaliesTab').style.display = tabId === 'anomalies' ? 'block' : 'none';
+    }
+</script>
+
+</body>
+</html>

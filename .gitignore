@@ -1,0 +1,22 @@
+# Environments
+.env
+
+# Databases
+*.db
+*.sqlite3
+
+# Python Caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local Docs (requested to exclude)
+docs/
+
+# IDE files
+.vscode/
+.idea/
